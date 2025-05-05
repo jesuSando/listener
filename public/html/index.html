@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor de Servidores</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="dashboard">
+        <h1>Monitor de Servidores</h1>
+        <div class="controls">
+            <button id=manualRefresh>Actualizar</button>
+            <div class="refresh-info">Actualizacion automatica cada 10 segundos</div>
+        </div>
+
+        <table id="serversTable">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                    <th>Última verificación</th>
+                </tr>
+            </thead>
+            <tbody id="serversList">
+
+            </tbody>
+        </table>
+        <div class="config-section">
+            <h3>Configuración de servidores</h3>
+            <div class="input-group">
+                <input type="text" id="serverNameInput" placeholder="Nombre del servidor">
+                <input type="text" id="serverUrlInput" placeholder="https://api.ejemplo.com/status">
+                <button id="addServerBtn">Agregar</button>
+            </div>
+            <div class="server-list" id="serverListConfig"></div>
+        </div>
+    </div>
+
+    <!-- json -->
+    <div id="jsonModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Respuesta del servidor</h3>
+            <pre id="jsonContent"></pre>
+        </div>
+    </div>
+
+    <!-- editar -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Editar servidor</h3>
+            <input type="text" id="editServerNameInput" class="full-width-input" placeholder="Nombre del servidor">
+            <input type="text" id="editServerUrlInput" class="full-width-input" placeholder="URL del servidor">
+            <button id="saveEditBtn" style="margin-top: 10px;">Guardar cambios</button>
+        </div>
+    </div>
+    <script src="../js/monitor.js"></script>
+</body>
+</html>

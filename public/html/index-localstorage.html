@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor de Servidores</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        
+        .dashboard {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        
+        .refresh-info {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background-color: #f2f2f2;
+            font-weight: 600;
+        }
+        
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        
+        .status-active {
+            color: #27ae60;
+        }
+        
+        .status-inactive {
+            color: #e74c3c;
+        }
+        
+        button {
+            padding: 8px 12px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+            margin-right: 5px;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        button.view-btn {
+            background-color: #2ecc71;
+        }
+        
+        button.view-btn:hover {
+            background-color: #27ae60;
+        }
+        
+        button.delete-btn {
+            background-color: #e74c3c;
+        }
+        
+        button.delete-btn:hover {
+            background-color: #c0392b;
+        }
+        
+        button.edit-btn {
+            background-color: #f39c12;
+        }
+        
+        button.edit-btn:hover {
+            background-color: #d35400;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: black;
+        }
+        
+        pre {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .last-checked {
+            font-size: 12px;
+            color: #95a5a6;
+            margin-top: 5px;
+        }
+        
+        .config-section {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+        
+        .input-group {
+            display: flex;
+            margin-bottom: 10px;
+            gap: 10px;
+        }
+        
+        .input-group input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        
+        .server-list {
+            margin-top: 15px;
+        }
+        
+        .server-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            background-color: white;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            margin-bottom: 5px;
+        }
+        
+        .server-item-actions button {
+            padding: 5px 8px;
+            font-size: 12px;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <h1>Monitor de Servidores</h1>
+        
+        <div class="controls">
+            <button id="manualRefresh">Actualizar ahora</button>
+            <div class="refresh-info">Actualización automática cada 10 segundos</div>
+        </div>
+        
+        <table id="serversTable">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                    <th>Última verificación</th>
+                </tr>
+            </thead>
+            <tbody id="serversList">
+                <!-- Las filas se generarán dinámicamente -->
+            </tbody>
+        </table>
+        
+        <div class="config-section">
+            <h3>Configuración de servidores</h3>
+            <div class="input-group">
+                <input type="text" id="serverNameInput" placeholder="Nombre del servidor">
+                <input type="text" id="serverUrlInput" placeholder="https://api.ejemplo.com/status">
+                <button id="addServerBtn">Agregar</button>
+            </div>
+            
+            <div class="server-list" id="serverListConfig">
+                <!-- Lista de servidores configurados -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para mostrar la respuesta JSON -->
+    <div id="jsonModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Respuesta del servidor</h3>
+            <pre id="jsonContent"></pre>
+        </div>
+    </div>
+    
+    <!-- Modal para editar servidor -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Editar servidor</h3>
+            <input type="text" id="editServerNameInput" placeholder="Nombre del servidor">
+            <input type="text" id="editServerUrlInput" placeholder="URL del servidor">
+            <button id="saveEditBtn" style="margin-top: 10px;">Guardar cambios</button>
+        </div>
+    </div>
+    
+    <script>
+                // Configuración inicial
+        let servers = [];
+        let refreshInterval = 10000; // 10 segundos
+        let refreshIntervalId = null;
+        let currentlyEditingId = null;
+
+        // Elementos del DOM
+        const serversList = document.getElementById('serversList');
+        const manualRefreshBtn = document.getElementById('manualRefresh');
+        const serverNameInput = document.getElementById('serverNameInput');
+        const serverUrlInput = document.getElementById('serverUrlInput');
+        const addServerBtn = document.getElementById('addServerBtn');
+        const serverListConfig = document.getElementById('serverListConfig');
+        const jsonModal = document.getElementById('jsonModal');
+        const jsonContent = document.getElementById('jsonContent');
+        const editModal = document.getElementById('editModal');
+        const editServerNameInput = document.getElementById('editServerNameInput');
+        const editServerUrlInput = document.getElementById('editServerUrlInput');
+        const saveEditBtn = document.getElementById('saveEditBtn');
+
+        // Cargar configuración guardada al iniciar
+        function loadConfig() {
+            const savedServers = localStorage.getItem('monitoredServers');
+            if (savedServers) {
+                servers = JSON.parse(savedServers);
+                updateConfigUI();
+                checkAllServers();
+            }
+        }
+
+        // Agregar nuevo servidor
+        function addServer() {
+            const name = serverNameInput.value.trim();
+            const url = serverUrlInput.value.trim();
+            
+            if (!name || !url) {
+                showAlert('Nombre y URL son requeridos');
+                return;
+            }
+
+            // Verificar si ya existe
+            if (servers.some(server => server.url === url)) {
+                showAlert('Este servidor ya está en la lista');
+                return;
+            }
+
+            servers.push({
+                id: Date.now(), // ID único basado en timestamp
+                name: name,
+                url: fixUrl(url), // Asegurar que la URL tenga protocolo
+                status: 'unknown',
+                lastChecked: null,
+                response: null
+            });
+
+            saveConfig();
+            serverNameInput.value = '';
+            serverUrlInput.value = '';
+            checkAllServers();
+        }
+
+        // Función para corregir URLs
+        function fixUrl(url) {
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                return `https://${url}`;
+            }
+            return url;
+        }
+
+        // Eliminar servidor
+        function deleteServer(id) {
+            servers = servers.filter(server => server.id !== id);
+            saveConfig();
+            checkAllServers();
+        }
+
+        // Editar servidor
+        function editServer(id) {
+            const server = servers.find(s => s.id === id);
+            if (!server) return;
+
+            currentlyEditingId = id;
+            editServerNameInput.value = server.name;
+            editServerUrlInput.value = server.url;
+            editModal.style.display = 'block';
+        }
+
+        // Guardar cambios de edición
+        function saveEdit() {
+            if (!currentlyEditingId) return;
+            
+            const newName = editServerNameInput.value.trim();
+            const newUrl = editServerUrlInput.value.trim();
+            
+            if (!newName || !newUrl) {
+                showAlert('Nombre y URL son requeridos');
+                return;
+            }
+
+            const serverIndex = servers.findIndex(s => s.id === currentlyEditingId);
+            if (serverIndex === -1) return;
+
+            servers[serverIndex] = {
+                ...servers[serverIndex],
+                name: newName,
+                url: fixUrl(newUrl),
+                status: 'unknown', // Resetear estado al editar
+                lastChecked: null,
+                response: null
+            };
+
+            saveConfig();
+            editModal.style.display = 'none';
+            currentlyEditingId = null;
+            checkAllServers();
+        }
+
+        // Guardar configuración
+        function saveConfig() {
+            localStorage.setItem('monitoredServers', JSON.stringify(servers));
+            updateConfigUI();
+            updateTable();
+        }
+
+        // Actualizar la UI de configuración
+        function updateConfigUI() {
+            serverListConfig.innerHTML = '';
+            
+            if (servers.length === 0) {
+                serverListConfig.innerHTML = '<p>No hay servidores configurados</p>';
+                return;
+            }
+            
+            servers.forEach(server => {
+                const serverItem = document.createElement('div');
+                serverItem.className = 'server-item';
+                
+                const serverInfo = document.createElement('div');
+                serverInfo.textContent = `${server.name} (${server.url})`;
+                
+                const serverActions = document.createElement('div');
+                serverActions.className = 'server-item-actions';
+                
+                const editBtn = document.createElement('button');
+                editBtn.className = 'edit-btn';
+                editBtn.textContent = 'Editar';
+                editBtn.addEventListener('click', () => editServer(server.id));
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.textContent = 'Borrar';
+                deleteBtn.addEventListener('click', () => deleteServer(server.id));
+                
+                serverActions.appendChild(editBtn);
+                serverActions.appendChild(deleteBtn);
+                serverItem.appendChild(serverInfo);
+                serverItem.appendChild(serverActions);
+                serverListConfig.appendChild(serverItem);
+            });
+        }
+
+        // Verificar estado de todos los servidores
+        function checkAllServers() {
+            servers.forEach(server => {
+                checkServerStatus(server);
+            });
+        }
+
+        // Verificar estado de un servidor individual con manejo de errores mejorado
+        async function checkServerStatus(server) {
+            try {
+                const startTime = Date.now();
+                const controller = new AbortController();
+                const timeout = 8000; // 8 segundos timeout
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
+                
+                const options = {
+                    method: 'GET',
+                    cache: 'no-store',
+                    signal: controller.signal,
+                    mode: 'cors',
+                    credentials: 'omit'
+                };
+
+                // Para desarrollo local, puedes intentar con 'no-cors' (limitado)
+                if (isLocalUrl(server.url)) {
+                    options.mode = 'no-cors';
+                }
+
+                const response = await fetch(server.url, options);
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                // Intenta parsear como JSON, si falla devuelve el texto
+                let data;
+                try {
+                    data = await response.json();
+                } catch {
+                    data = { rawResponse: await response.text() };
+                }
+
+                const responseTime = Date.now() - startTime;
+                
+                server.status = 'active';
+                server.response = {
+                    ...data,
+                    _metadata: {
+                        responseTime: `${responseTime}ms`,
+                        statusCode: response.status,
+                        headers: Object.fromEntries(response.headers.entries())
+                    }
+                };
+                server.lastChecked = new Date();
+            } catch (error) {
+                server.status = 'inactive';
+                server.response = { 
+                    error: error.message,
+                    details: getErrorDetails(error, server.url)
+                };
+                server.lastChecked = new Date();
+            } finally {
+                saveConfig();
+            }
+        }
+
+        // Detectar URLs locales
+        function isLocalUrl(url) {
+            try {
+                const urlObj = new URL(url);
+                return (
+                    urlObj.hostname === 'localhost' || 
+                    urlObj.hostname.startsWith('192.168.') ||
+                    urlObj.hostname.startsWith('10.')
+                );
+            } catch {
+                return false;
+            }
+        }
+
+        // Mejorar mensajes de error
+        function getErrorDetails(error, url) {
+            if (error.message.includes('Failed to fetch')) {
+                return 'No se pudo conectar al servidor. Verifica:';
+            }
+            if (error.message.includes('CORS')) {
+                return `Problema de CORS. El servidor necesita configurar: 
+        Access-Control-Allow-Origin: *`;
+            }
+            if (error.message.includes('certificate')) {
+                return 'Error de certificado SSL (solo solucionable desde servidor Node.js con opción rejectUnauthorized: false)';
+            }
+            if (error.message.includes('aborted')) {
+                return 'Timeout: El servidor no respondió en 8 segundos';
+            }
+            return 'Error desconocido. Verifica la consola para más detalles.';
+        }
+
+        // Mostrar alertas temporales
+        function showAlert(message, duration = 3000) {
+            const alert = document.createElement('div');
+            alert.style.position = 'fixed';
+            alert.style.top = '20px';
+            alert.style.right = '20px';
+            alert.style.backgroundColor = '#e74c3c';
+            alert.style.color = 'white';
+            alert.style.padding = '10px 20px';
+            alert.style.borderRadius = '5px';
+            alert.style.zIndex = '1000';
+            alert.textContent = message;
+            
+            document.body.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.style.transition = 'opacity 0.5s';
+                alert.style.opacity = '0';
+                setTimeout(() => document.body.removeChild(alert), 500);
+            }, duration);
+        }
+
+        // Actualizar la tabla con los datos actuales
+        function updateTable() {
+            serversList.innerHTML = '';
+            
+            if (servers.length === 0) {
+                serversList.innerHTML = '<tr><td colspan="4" style="text-align: center;">No hay servidores configurados</td></tr>';
+                return;
+            }
+            
+            servers.forEach(server => {
+                const row = document.createElement('tr');
+                
+                // Nombre
+                const nameCell = document.createElement('td');
+                nameCell.textContent = server.name;
+                row.appendChild(nameCell);
+                
+                // Estado
+                const statusCell = document.createElement('td');
+                const statusSpan = document.createElement('span');
+                statusSpan.className = `status status-${server.status || 'unknown'}`;
+                
+                if (server.status === 'active') {
+                    statusSpan.textContent = 'Activo 🟢';
+                } else if (server.status === 'inactive') {
+                    statusSpan.textContent = `Inactivo 🔴 (${server.response?.error?.substring(0, 20)}...)`;
+                } else {
+                    statusSpan.textContent = 'Desconocido ⚠️';
+                }
+                
+                statusCell.appendChild(statusSpan);
+                row.appendChild(statusCell);
+                
+                // Acciones
+                const actionsCell = document.createElement('td');
+                
+                const viewBtn = document.createElement('button');
+                viewBtn.className = 'view-btn';
+                viewBtn.textContent = 'Ver respuesta';
+                viewBtn.addEventListener('click', () => showServerResponse(server.response));
+                
+                const editBtn = document.createElement('button');
+                editBtn.className = 'edit-btn';
+                editBtn.textContent = 'Editar';
+                editBtn.addEventListener('click', () => editServer(server.id));
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.textContent = 'Borrar';
+                deleteBtn.addEventListener('click', () => deleteServer(server.id));
+                
+                actionsCell.appendChild(viewBtn);
+                actionsCell.appendChild(editBtn);
+                actionsCell.appendChild(deleteBtn);
+                row.appendChild(actionsCell);
+                
+                // Última verificación
+                const lastCheckedCell = document.createElement('td');
+                if (server.lastChecked) {
+                    const date = new Date(server.lastChecked);
+                    lastCheckedCell.innerHTML = `
+                        ${date.toLocaleTimeString()}
+                        <br>
+                        <span class="last-checked">${timeSince(date)}</span>
+                    `;
+                } else {
+                    lastCheckedCell.textContent = 'Nunca';
+                }
+                row.appendChild(lastCheckedCell);
+                
+                serversList.appendChild(row);
+            });
+        }
+
+        // Mostrar tiempo transcurrido en formato legible
+        function timeSince(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            
+            if (seconds < 60) return `hace ${seconds} segundos`;
+            
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `hace ${minutes} minutos`;
+            
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `hace ${hours} horas`;
+            
+            const days = Math.floor(hours / 24);
+            return `hace ${days} días`;
+        }
+
+        // Mostrar la respuesta JSON en un modal
+        function showServerResponse(response) {
+            let content;
+            
+            if (response?.error) {
+                content = `🚨 Error: ${response.error}\n\n`;
+                content += `🔍 Detalles: ${response.details || 'No disponibles'}\n\n`;
+                
+                if (response.details?.includes('CORS')) {
+                    content += `💡 Solución: El servidor necesita configurar:\n`;
+                    content += `Access-Control-Allow-Origin: *\n`;
+                    content += `Access-Control-Allow-Methods: GET, OPTIONS\n\n`;
+                    content += `Esto debe configurarse en el servidor de la API.`;
+                }
+            } else {
+                content = JSON.stringify(response, null, 2);
+            }
+            
+            jsonContent.textContent = content;
+            jsonModal.style.display = 'block';
+        }
+
+        // Iniciar intervalo de actualización automática
+        function startAutoRefresh() {
+            if (refreshIntervalId) {
+                clearInterval(refreshIntervalId);
+            }
+            refreshIntervalId = setInterval(checkAllServers, refreshInterval);
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            loadConfig();
+            startAutoRefresh();
+        });
+
+        manualRefreshBtn.addEventListener('click', checkAllServers);
+        addServerBtn.addEventListener('click', addServer);
+        saveEditBtn.addEventListener('click', saveEdit);
+
+        // Agregar servidor con Enter
+        serverUrlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addServer();
+        });
+
+        // Cerrar modales
+        document.querySelectorAll('.close').forEach(btn => {
+            btn.addEventListener('click', () => {
+                btn.closest('.modal').style.display = 'none';
+            });
+        });
+
+        window.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
